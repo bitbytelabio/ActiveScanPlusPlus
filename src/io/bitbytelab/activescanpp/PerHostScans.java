@@ -10,13 +10,21 @@ import burp.api.montoya.scanner.audit.insertionpoint.AuditInsertionPoint;
 import burp.api.montoya.scanner.audit.issues.AuditIssue;
 import java.util.HashMap;
 import java.util.Map;
+import java.net.URI;
+import java.net.URISyntaxException;
 
 public class PerHostScans implements ScanCheck {
     List<String> scanned_hosts;
 
     @Override
     public AuditResult activeAudit(HttpRequestResponse baseRequestResponse, AuditInsertionPoint auditInsertionPoint) {
-        String host = baseRequestResponse.request().url();
+        URI uri = null;
+        try {
+            uri = new URI(baseRequestResponse.request().url());
+        } catch (URISyntaxException e) {
+            return null;
+        }
+        String host = uri.getHost();
         if (scanned_hosts.contains(host)) {
             return null;
         }
@@ -56,6 +64,11 @@ public class PerHostScans implements ScanCheck {
         interestingFileMappings.put("/server-status", "Server uptime");
         interestingFileMappings.put("/.well-known/apple-app-site-association", "applinks");
         return interestingFileMappings;
+    }
+
+    static void fetchURI(HttpRequestResponse baseRequestResponse, String url) {]
+        String path = baseRequestResponse.request().path();
+        var newRequest = baseRequestResponse.request().path();
     }
 
 }
