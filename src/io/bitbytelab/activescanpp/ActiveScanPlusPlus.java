@@ -1,52 +1,24 @@
 package io.bitbytelab.activescanpp;
 
-import burp.api.montoya.scanner.AuditResult;
-import burp.api.montoya.scanner.ConsolidationAction;
-import burp.api.montoya.scanner.ScanCheck;
-import burp.api.montoya.scanner.audit.insertionpoint.AuditInsertionPoint;
-import burp.api.montoya.scanner.audit.issues.AuditIssue;
-import burp.api.montoya.BurpExtension;
-import burp.api.montoya.MontoyaApi;
-import burp.api.montoya.http.message.HttpRequestResponse;
-import java.nio.charset.StandardCharsets;
+import burp.*;
 
-public class ActiveScanPlusPlus implements ScanCheck, BurpExtension {
+public class ActiveScanPlusPlus implements IBurpExtender {
+    private static String VERSION = "0.0.1";
+    private IExtensionHelpers helpers;
+    private IBurpExtenderCallbacks callbacks;
 
     @Override
-    public void initialize(MontoyaApi api) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'initialize'");
-    }
-
-    @Override
-    public AuditResult activeAudit(HttpRequestResponse baseRequestResponse, AuditInsertionPoint auditInsertionPoint) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'activeAudit'");
-    }
-
-    @Override
-    public AuditResult passiveAudit(HttpRequestResponse baseRequestResponse) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'passiveAudit'");
-    }
-
-    @Override
-    public ConsolidationAction consolidateIssues(AuditIssue newIssue, AuditIssue existingIssue) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'consolidateIssues'");
-    }
-
-    static String safeBytesToString(byte[] bytes) {
-        if (bytes == null) {
-            bytes = new byte[0];
+    public void registerExtenderCallbacks(IBurpExtenderCallbacks callbacks) {
+        this.callbacks = callbacks;
+        this.helpers = callbacks.getHelpers();
+        callbacks.setExtensionName("ActiveScan++");
+        boolean collab_enabled = true;
+        if (callbacks.saveConfigAsJson("project_options.misc.collaborator_server").contains("\"type\":\"none\"")) {
+            collab_enabled = false;
+            System.out.println("Collaborator not enabled; skipping checks that require it");
         }
-        return new String(bytes, StandardCharsets.UTF_8);
-    }
 
-    static String htmlEncode(String string) {
-        if (string == null) {
-            return null;
-        }
-        return string.replace("<", "&lt;").replace(">", "&gt;");
+        System.out.println(String.format("Successfully loaded activeScan++ v%s", VERSION));
+        return;
     }
 }

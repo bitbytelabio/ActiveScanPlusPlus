@@ -1,74 +1,81 @@
 package io.bitbytelab.activescanpp;
 
 import java.util.List;
+import java.util.Arrays;
+import java.util.ArrayList;
+import java.nio.charset.StandardCharsets;
+import burp.*;
 
-import burp.api.montoya.http.message.HttpRequestResponse;
-import burp.api.montoya.scanner.AuditResult;
-import burp.api.montoya.scanner.ConsolidationAction;
-import burp.api.montoya.scanner.ScanCheck;
-import burp.api.montoya.scanner.audit.insertionpoint.AuditInsertionPoint;
-import burp.api.montoya.scanner.audit.issues.AuditIssue;
-import java.util.HashMap;
-import java.util.Map;
-import java.net.URI;
-import java.net.URISyntaxException;
-
-public class PerHostScans implements ScanCheck {
-    List<String> scanned_hosts;
+public class PerHostScans implements IScannerCheck {
+    private List<String> scanned_hosts;
+    private List<List<String>> interestingFileMappings = Arrays.asList(
+            Arrays.asList("/.git/config", "[core]", "source code leak?"),
+            Arrays.asList("/server-status", "Server uptime", "debug info"),
+            Arrays.asList("/.well-known/apple-app-site-association", "applinks",
+                    "https://developer.apple.com/library/archive/documentation/General/Conceptual/AppSearch/UniversalLinks.html"),
+            Arrays.asList("/.well-known/openid-configuration", "\"authorization_endpoint\"",
+                    "https://portswigger.net/research/hidden-oauth-attack-vectors"),
+            Arrays.asList("/.well-known/oauth-authorization-server", "\"authorization_endpoint\"",
+                    "https://portswigger.net/research/hidden-oauth-attack-vectors"),
+            Arrays.asList("/users/confirmation", "onfirmation token",
+                    "Websites using the Devise framework often have a race condition enabling email forgery: https://portswigger.net/research/smashing-the-state-machine"));
 
     @Override
-    public AuditResult activeAudit(HttpRequestResponse baseRequestResponse, AuditInsertionPoint auditInsertionPoint) {
-        URI uri = null;
-        try {
-            uri = new URI(baseRequestResponse.request().url());
-        } catch (URISyntaxException e) {
-            return null;
-        }
-        String host = uri.getHost();
+    public List<IScanIssue> doPassiveScan(IHttpRequestResponse baseRequestResponse) {
+        return new ArrayList<>();
+    }
+
+    @Override
+    public List<IScanIssue> doActiveScan(IHttpRequestResponse baseRequestResponse,
+            IScannerInsertionPoint insertionPoint) {
+        String host = baseRequestResponse.getHttpService().getHost();
         if (scanned_hosts.contains(host)) {
-            return null;
+            return new ArrayList<>();
         }
-        scanned_hosts.add(host);
-        List<AuditIssue> issues = null;
-
-        throw new UnsupportedOperationException("Unimplemented method 'activeAudit'");
+        this.scanned_hosts.add(host);
+        List<IScanIssue> issues = new ArrayList<>();
+        issues.addAll(this.interestingFileScan(baseRequestResponse));
+        return issues;
     }
 
     @Override
-    public AuditResult passiveAudit(HttpRequestResponse baseRequestResponse) {
+    public int consolidateDuplicateIssues(IScanIssue existingIssue, IScanIssue newIssue) {
         // TODO Auto-generated method stub
-        return null;
+        throw new UnsupportedOperationException("Unimplemented method 'consolidateDuplicateIssues'");
     }
 
-    @Override
-    public ConsolidationAction consolidateIssues(AuditIssue newIssue, AuditIssue existingIssue) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'consolidateIssues'");
-    }
+    private List<IScanIssue> interestingFileScan(IHttpRequestResponse baseRequestResponse) {
+        List<IScanIssue> issues = new ArrayList<>();
+        for (List<String> mapping : interestingFileMappings) {
+            String url = mapping.get(0);
+            String expect = mapping.get(1);
+            String reason = mapping.get(2);
+            IHttpRequestResponse attack = fetchURL(baseRequestResponse, url);
 
-    static List<AuditIssue> interestingFileScan(HttpRequestResponse baseRequestResponse) {
-        List<AuditIssue> issues = null;
-
-        for (Map.Entry<String, String> interestingFileMapping : interestingFileMappings().entrySet()) {
-            String interestingFile = interestingFileMapping.getKey();
-            String interestingFileContent = interestingFileMapping.getValue();
-
+            if (safeBytesToString(attack.getResponse()).contains(expect)) {
+                IHttpRequestResponse baseline = fetchURL(baseRequestResponse, url.substring(0, url.length() - 1));
+                if (!safeBytesToString(baseline.getResponse()).contains(expect)) {
+                    // issues.add();
+                    // TODO: implement CustomScanIssue
+                }
+            }
         }
 
         return issues;
     }
 
-    static Map<String, String> interestingFileMappings() {
-        Map<String, String> interestingFileMappings = new HashMap<>();
-        interestingFileMappings.put("/.git/config", "[core]");
-        interestingFileMappings.put("/server-status", "Server uptime");
-        interestingFileMappings.put("/.well-known/apple-app-site-association", "applinks");
-        return interestingFileMappings;
+    private IHttpRequestResponse fetchURL(IHttpRequestResponse baseRequestResponse, String url) {
+        // Implement this method to fetch the URL and return the response.
+        // You can use the helpers.buildHttpRequest() and callbacks.makeHttpRequest()
+        // methods.
+        return null;
     }
 
-    static void fetchURI(HttpRequestResponse baseRequestResponse, String url) {
-        String path = baseRequestResponse.request().path();
-        var newRequest = baseRequestResponse.request().path();
+    private String safeBytesToString(byte[] bytes) {
+        if (bytes == null) {
+            bytes = new byte[0];
+        }
+        return new String(bytes, StandardCharsets.UTF_8);
     }
 
 }
