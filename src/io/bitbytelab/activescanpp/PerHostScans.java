@@ -9,6 +9,7 @@ import burp.*;
 public class PerHostScans implements IScannerCheck {
     private List<String> scanned_hosts;
     private IExtensionHelpers helpers;
+    private IBurpExtenderCallbacks callbacks;
     private List<List<String>> interestingFileMappings = Arrays.asList(
             Arrays.asList("/.git/config", "[core]", "source code leak?"),
             Arrays.asList("/server-status", "Server uptime", "debug info"),
@@ -22,6 +23,7 @@ public class PerHostScans implements IScannerCheck {
                     "Websites using the Devise framework often have a race condition enabling email forgery: https://portswigger.net/research/smashing-the-state-machine"));
 
     public PerHostScans(IBurpExtenderCallbacks callbacks) {
+        this.callbacks = callbacks;
         this.helpers = callbacks.getHelpers();
     }
 
@@ -45,8 +47,7 @@ public class PerHostScans implements IScannerCheck {
 
     @Override
     public int consolidateDuplicateIssues(IScanIssue existingIssue, IScanIssue newIssue) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'consolidateDuplicateIssues'");
+        return 0;
     }
 
     private List<IScanIssue> interestingFileScan(IHttpRequestResponse baseRequestResponse) {
@@ -77,10 +78,9 @@ public class PerHostScans implements IScannerCheck {
     }
 
     private IHttpRequestResponse fetchURL(IHttpRequestResponse baseRequestResponse, String url) {
-        // Implement this method to fetch the URL and return the response.
-        // You can use the helpers.buildHttpRequest() and callbacks.makeHttpRequest()
-        // methods.
-        return null;
+        String path = this.helpers.analyzeRequest(baseRequestResponse).getUrl().getPath();
+        String newRequest = safeBytesToString(baseRequestResponse.getRequest()).replace(path, url);
+        return callbacks.makeHttpRequest(baseRequestResponse.getHttpService(), newRequest.getBytes());
     }
 
     private String safeBytesToString(byte[] bytes) {
