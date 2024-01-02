@@ -66,7 +66,7 @@ public class PerHostScans implements ScanCheck {
         return interestingFileMappings;
     }
 
-    static void fetchURI(HttpRequestResponse baseRequestResponse, String url) {]
+    static void fetchURI(HttpRequestResponse baseRequestResponse, String url) {
         String path = baseRequestResponse.request().path();
         var newRequest = baseRequestResponse.request().path();
     }
