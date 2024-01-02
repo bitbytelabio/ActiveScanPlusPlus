@@ -8,6 +8,7 @@ import burp.*;
 
 public class PerHostScans implements IScannerCheck {
     private List<String> scanned_hosts;
+    private IExtensionHelpers helpers;
     private List<List<String>> interestingFileMappings = Arrays.asList(
             Arrays.asList("/.git/config", "[core]", "source code leak?"),
             Arrays.asList("/server-status", "Server uptime", "debug info"),
@@ -19,6 +20,10 @@ public class PerHostScans implements IScannerCheck {
                     "https://portswigger.net/research/hidden-oauth-attack-vectors"),
             Arrays.asList("/users/confirmation", "onfirmation token",
                     "Websites using the Devise framework often have a race condition enabling email forgery: https://portswigger.net/research/smashing-the-state-machine"));
+
+    public PerHostScans(IBurpExtenderCallbacks callbacks) {
+        this.helpers = callbacks.getHelpers();
+    }
 
     @Override
     public List<IScanIssue> doPassiveScan(IHttpRequestResponse baseRequestResponse) {
@@ -55,8 +60,15 @@ public class PerHostScans implements IScannerCheck {
             if (safeBytesToString(attack.getResponse()).contains(expect)) {
                 IHttpRequestResponse baseline = fetchURL(baseRequestResponse, url.substring(0, url.length() - 1));
                 if (!safeBytesToString(baseline.getResponse()).contains(expect)) {
-                    // issues.add();
-                    // TODO: implement CustomScanIssue
+                    issues.add(new CustomScanIssue(baseRequestResponse.getHttpService(),
+                            this.helpers.analyzeRequest(attack).getUrl(),
+                            "Interesting File Found: " + url, new IHttpRequestResponse[] { attack, baseline },
+                            "The response to <b>" + htmlEncode(url) + "</b> contains <b>'" + htmlEncode(expect)
+                                    + "'</b><br/><br/>This may be interesting. Here's a clue why: <b>"
+                                    + htmlEncode(reason)
+                                    + "</b>",
+                            "Firm", "Information"));
+
                 }
             }
         }
@@ -76,6 +88,10 @@ public class PerHostScans implements IScannerCheck {
             bytes = new byte[0];
         }
         return new String(bytes, StandardCharsets.UTF_8);
+    }
+
+    private String htmlEncode(String string) {
+        return string.replace("<", "&lt;").replace(">", "&gt;");
     }
 
 }
