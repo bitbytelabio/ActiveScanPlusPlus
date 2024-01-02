@@ -6,6 +6,9 @@
  */
 apply plugin: 'java'
 
+sourceCompatibility = JavaVersion.VERSION_17
+targetCompatibility = JavaVersion.VERSION_17
+
 repositories {
     // Use Maven Central for resolving dependencies.
     // You can declare any Maven/Ivy/file repository here.
@@ -13,7 +16,10 @@ repositories {
 }
 
 dependencies {
-    implementation 'net.portswigger.burp.extender:montoya-api:+'
+    // implementation 'net.portswigger.burp.extender:montoya-api:0.9.25'
+    implementation 'net.portswigger.burp.extensions:montoya-api:2023.3'
+
+    testRuntimeOnly files("//mnt/Projects/BurpSuitePro/burpsuite_pro_v2023.12.1.jar")
 }
 
 sourceSets {
